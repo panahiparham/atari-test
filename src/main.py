@@ -38,11 +38,14 @@ import jax
 device = 'gpu' if args.gpu else 'cpu'
 jax.config.update('jax_platform_name', device)
 
+print(jax.devices())
+print(jax.default_backend())
+
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger('exp')
 prod = 'cdr' in socket.gethostname() or args.silent
-if not prod:
-    logger.setLevel(logging.DEBUG)
+#if not prod:
+logger.setLevel(logging.DEBUG)
 
 
 # ----------------------
