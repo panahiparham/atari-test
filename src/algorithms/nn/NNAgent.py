@@ -167,7 +167,7 @@ class NNAgent(BaseAgent):
             r = np.clip(r, -self.reward_clip, self.reward_clip)
 
         self.buffer.add_step(Timestep(
-            x=np.zeros(self.observations),
+            x=np.zeros(self.observations, dtype=self.observation_type),
             a=-1,
             r=r,
             gamma=0,

@@ -18,6 +18,9 @@ class BaseAgent(RlGlue.agent.BaseAgent):
         self.gamma = params.get('gamma', 1)
         self.n_step = params.get('n_step', 1)
 
+        self.observation_type = params.get('observation_type', float)
+
+
     def cleanup(self):
         ...
 

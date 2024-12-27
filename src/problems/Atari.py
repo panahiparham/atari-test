@@ -1,7 +1,12 @@
+import numpy as np
+import pickle
+import os
+
 from experiment.ExperimentModel import ExperimentModel
 from problems.BaseProblem import BaseProblem
 from environments.Atari import Atari as AtariEnv
 from PyExpUtils.collection.Collector import Collector
+from ReplayTables.storage.CompressedStorage import CompressedStorage
 
 def upperFirst(s: str):
     f = s[0].upper()
@@ -25,6 +30,17 @@ class Atari(BaseProblem):
 
         self.observations = (84, 84, 4)
         self.gamma = 0.99
+        self.params['observation_type'] = np.uint8
 
         # enable reward clipping
         self.params['reward_clip'] = 1
+
+    def getAgent(self):
+        agent = super().getAgent()
+
+        # set-up compressed storage for experience replay
+        if hasattr(agent, 'buffer'):
+            storage = CompressedStorage(agent.buffer._max_size)
+            agent.buffer.use_storage(storage)
+
+        return agent
