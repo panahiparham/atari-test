@@ -44,3 +44,28 @@ class Atari(BaseProblem):
             agent.buffer.use_storage(storage)
 
         return agent
+
+    def maybe_save_agent(self, step: int):
+        save_interval = self.exp.save_interval
+        if save_interval <= 0:
+            return
+
+        if step % save_interval != 0:
+            return
+
+        save_path = os.path.join(
+            self.exp.interpolateSavePath(idx=self.idx),
+            'agents',
+            str(self.idx),
+
+        )
+        _ = os.path.exists(save_path) or os.makedirs(save_path)
+
+        if not hasattr(self.agent, 'state'):
+            return
+
+        state = self.agent.__dict__['state']
+        params = state.params
+
+        with open(os.path.join(save_path, f'{step}.pkl'), 'wb') as f:
+            pickle.dump(params, f)

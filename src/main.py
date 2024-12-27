@@ -3,6 +3,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
+import pickle
 import time
 import socket
 import logging
@@ -58,7 +59,7 @@ indices = args.idxs
 
 Problem = getProblem(exp.problem)
 for idx in indices:
-    chk = Checkpoint(exp, idx, base_path=args.checkpoint_path)
+    chk = Checkpoint(exp, idx, base_path=args.checkpoint_path, save_every = 150)
     chk.load_if_exists()
     timeout_handler.before_cancel(chk.save)
 
@@ -73,14 +74,26 @@ for idx in indices:
             'episode': Identity(),
             'steps': Identity(),
             'delta': Pipe(
-                MovingAverage(0.99),
-                Subsample(100),
+                MovingAverage(0.999),
+                Subsample(exp.total_steps // 1000),
             ),
         },
         # by default, ignore keys that are not explicitly listed above
         default=Ignore(),
+        idx=idx,
     ))
-    collector.setIdx(idx)
+    collector._idxs.add(idx)
+
+    # agent_collector = chk.build('agent_collector', lambda: Collector(
+    #     config={
+    #         'state': Subsample(exp.save_interval) if exp.save_interval > 0 else Ignore(),
+    #     },
+    #     default=Ignore(),
+    #     idx=idx,
+    # ))
+    # agent_collector._idxs.add(idx)
+
+
     run = exp.getRun(idx)
 
     # set random seeds accordingly
@@ -104,6 +117,12 @@ for idx in indices:
     for step in range(glue.total_steps, exp.total_steps):
         collector.next_frame()
         chk.maybe_save()
+        # problem.maybe_save_agent(step)
+
+        # agent_collector.next_frame()
+        # if hasattr(agent, 'state'):
+        #     agent_collector.collect('state', pickle.dumps(agent.state.params))
+
         interaction = glue.step()
 
         if interaction.t or (exp.episode_cutoff > -1 and glue.num_steps >= exp.episode_cutoff):
@@ -127,10 +146,23 @@ for idx in indices:
 
             glue.start()
 
+    # problem.maybe_save_agent(exp.total_steps)
+    # collect final model
+    # agent_collector.next_frame()
+    # if hasattr(agent, 'state'):
+    #     agent_collector.collect('state', pickle.dumps(agent.state.params))
+
     collector.reset()
+    # agent_collector.reset()
 
     # ------------
     # -- Saving --
     # ------------
     saveCollector(exp, collector, base=args.save_path)
+
+    # _tmp: str | None = exp.save_key
+    # exp.save_key = os.path.join(exp.interpolateSavePath(idx), f'agents/')
+    # saveCollector(exp, agent_collector, base=args.save_path)
+    # exp.save_key = _tmp
+
     chk.delete()
