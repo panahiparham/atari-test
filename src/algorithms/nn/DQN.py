@@ -79,7 +79,7 @@ class DQN(NNAgent):
         self.updates += 1
 
         batch = self.buffer.sample(self.batch_size)
-        weights = self.buffer.isr_weights(batch.trans_id)
+        weights = self.buffer.isr_weights(batch.eid)
         self.state, metrics = self._computeUpdate(self.state, batch, weights)
 
         metrics = jax.device_get(metrics)
