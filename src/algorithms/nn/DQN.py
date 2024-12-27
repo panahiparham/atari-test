@@ -5,7 +5,6 @@ from ReplayTables.ReplayBuffer import Batch
 
 from algorithms.nn.NNAgent import NNAgent
 from representations.networks import NetworkBuilder
-from utils.jax import huber_loss
 
 import jax
 import chex
@@ -22,13 +21,15 @@ class AgentState:
     optim: optax.OptState
 
 
-def q_loss(q, a, r, gamma, qp):
+def q_loss(q, a, r, gamma, qp, error_clip):
     vp = qp.max()
     target = r + gamma * vp
     target = jax.lax.stop_gradient(target)
     delta = target - q[a]
+    clipped_delta = jnp.clip(delta, -error_clip, error_clip)
+    loss = 0.5 * clipped_delta**2
 
-    return huber_loss(1.0, q[a], target), {
+    return loss, {
         'delta': delta,
     }
 
@@ -37,6 +38,7 @@ class DQN(NNAgent):
         super().__init__(observations, actions, params, collector, seed)
         # set up the target network parameters
         self.target_refresh = params['target_refresh']
+        self.error_clip = params['error_clip']
 
         self.state = AgentState(
             params=self.state.params,
@@ -59,6 +61,13 @@ class DQN(NNAgent):
     def update(self):
         self.steps += 1
 
+        # warmup steps
+        if self.steps < self.warmup_steps:
+            return
+
+        # decay epsilon
+        self.epsilon = max(self._epsilon, self.epsilon - self.epsilon_decay)
+
         # only update every `update_freq` steps
         if self.steps % self.update_freq != 0:
             return
@@ -70,7 +79,7 @@ class DQN(NNAgent):
         self.updates += 1
 
         batch = self.buffer.sample(self.batch_size)
-        weights = self.buffer.isr_weights(batch.eid)
+        weights = self.buffer.isr_weights(batch.trans_id)
         self.state, metrics = self._computeUpdate(self.state, batch, weights)
 
         metrics = jax.device_get(metrics)
@@ -90,7 +99,7 @@ class DQN(NNAgent):
     @partial(jax.jit, static_argnums=0)
     def _computeUpdate(self, state: AgentState, batch: Batch, weights: jax.Array):
         grad_fn = jax.grad(self._loss, has_aux=True)
-        grad, metrics = grad_fn(state.params, state.target_params, batch, weights)
+        grad, metrics = grad_fn(state.params, state.target_params, batch, weights, self.error_clip)
 
         updates, optim = self.optimizer.update(grad, state.optim, state.params)
         params = optax.apply_updates(state.params, updates)
@@ -103,15 +112,15 @@ class DQN(NNAgent):
 
         return new_state, metrics
 
-    def _loss(self, params: hk.Params, target: hk.Params, batch: Batch, weights: jax.Array):
+    def _loss(self, params: hk.Params, target: hk.Params, batch: Batch, weights: jax.Array, error_clip: float):
         phi = self.phi(params, batch.x).out
         phi_p = self.phi(target, batch.xp).out
 
         qs = self.q(params, phi)
         qsp = self.q(target, phi_p)
 
-        batch_loss = jax.vmap(q_loss, in_axes=0)
-        losses, metrics = batch_loss(qs, batch.a, batch.r, batch.gamma, qsp)
+        batch_loss = jax.vmap(q_loss, in_axes=[0, 0, 0, 0, 0, None])
+        losses, metrics = batch_loss(qs, batch.a, batch.r, batch.gamma, qsp, error_clip)
 
         chex.assert_equal_shape((weights, losses))
         loss = jnp.mean(weights * losses)

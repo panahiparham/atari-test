@@ -28,10 +28,24 @@ class NNAgent(BaseAgent):
         # ------------------------------
         # -- Configuration Parameters --
         # ------------------------------
+        self.warmup_steps = params['warmup_steps']
+
         self.rep_params: Dict = params['representation']
         self.optimizer_params: Dict = params['optimizer']
 
-        self.epsilon = params['epsilon']
+        self._epsilon = params['epsilon']
+        self._initial_epsilon = params.get('initial_epsilon', -1.0)
+
+        if self._initial_epsilon < 0:
+            self.epsilon = self._epsilon
+            self.epsilon_decay = 0.0
+        else:
+            assert self._initial_epsilon >= self._epsilon
+            self.initial_epsilon_end_step = params['initial_epsilon_end_step']
+            self.epsilon = self._initial_epsilon
+            assert self.initial_epsilon_end_step > self.warmup_steps
+            self.epsilon_decay = (self._initial_epsilon - self._epsilon) / (self.initial_epsilon_end_step - self.warmup_steps)
+
         self.reward_clip = params.get('reward_clip', 0)
 
         # ---------------------
@@ -46,9 +60,10 @@ class NNAgent(BaseAgent):
         # -- Optimizer --
         # ---------------
         self.optimizer = optax.adam(
-            self.optimizer_params['alpha'],
-            self.optimizer_params['beta1'],
-            self.optimizer_params['beta2'],
+            learning_rate = self.optimizer_params['alpha'],
+            b1 = self.optimizer_params['b1'],
+            b2 = self.optimizer_params['b2'],
+            eps = self.optimizer_params['eps'],
         )
         opt_state = self.optimizer.init(net_params)
 

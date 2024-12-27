@@ -8,17 +8,30 @@
             "game": ["Pong"]
         },
 
+        "experiment": {
+            "evaluation_epsilon": 0.05,
+            "eval_steps": 125000
+        },
+
+        "initial_epsilon": 1.0,
+        "initial_epsilon_end_step": 1000000,
         "epsilon": 0.1,
+
         "buffer_type": "uniform",
         "buffer_size": 1000000,
+        "warmup_steps": 0,
         "batch": 32,
-        "target_refresh": 2500,
         "update_freq": 4,
+
+        "error_clip": 1.0,
+
+        "target_refresh": 2500,
         "optimizer": {
-            "name": "ADAM",
-            "alpha": 6.103515625e-05,
-            "beta1": 0.9,
-            "beta2": 0.999
+            "name": "adam",
+            "alpha": [6.25e-05],
+            "b1": 0.9,
+            "b2": 0.999,
+            "eps": 0.00015625
         },
 
         "representation": {
