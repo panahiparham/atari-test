@@ -117,7 +117,7 @@ for idx in indices:
     for step in range(glue.total_steps, exp.total_steps):
         collector.next_frame()
         chk.maybe_save()
-        # problem.maybe_save_agent(step)
+        problem.maybe_save_agent(step)
 
         agent_collector.next_frame()
         if hasattr(agent, 'state'):
@@ -146,7 +146,7 @@ for idx in indices:
 
             glue.start()
 
-    # problem.maybe_save_agent(exp.total_steps)
+    problem.maybe_save_agent(exp.total_steps)
     # collect final model
     agent_collector.next_frame()
     if hasattr(agent, 'state'):
