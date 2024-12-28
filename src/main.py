@@ -121,7 +121,7 @@ for idx in indices:
 
         agent_collector.next_frame()
         if hasattr(agent, 'state'):
-            agent_collector.collect('state', pickle.dumps(agent.state.params))
+            agent_collector.evaluate('state', lambda: pickle.dumps(agent.state.params))
 
         interaction = glue.step()
 
@@ -150,7 +150,7 @@ for idx in indices:
     # collect final model
     agent_collector.next_frame()
     if hasattr(agent, 'state'):
-        agent_collector.collect('state', pickle.dumps(agent.state.params))
+        agent_collector.evaluate('state', lambda: pickle.dumps(agent.state.params))
 
     collector.reset()
     agent_collector.reset()
