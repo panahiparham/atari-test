@@ -3,6 +3,7 @@
     "problem": "Atari",
     "total_steps": 50000000,
     "episode_cutoff": 27000,
+    "save_interval": 250000,
     "metaParameters": {
         "environment": {
             "game": ["Pong"]
