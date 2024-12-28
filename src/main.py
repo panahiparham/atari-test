@@ -84,14 +84,14 @@ for idx in indices:
     ))
     collector._idxs.add(idx)
 
-    # agent_collector = chk.build('agent_collector', lambda: Collector(
-    #     config={
-    #         'state': Subsample(exp.save_interval) if exp.save_interval > 0 else Ignore(),
-    #     },
-    #     default=Ignore(),
-    #     idx=idx,
-    # ))
-    # agent_collector._idxs.add(idx)
+    agent_collector = chk.build('agent_collector', lambda: Collector(
+        config={
+            'state': Subsample(exp.save_interval) if exp.save_interval > 0 else Ignore(),
+        },
+        default=Ignore(),
+        idx=idx,
+    ))
+    agent_collector._idxs.add(idx)
 
 
     run = exp.getRun(idx)
@@ -119,9 +119,9 @@ for idx in indices:
         chk.maybe_save()
         # problem.maybe_save_agent(step)
 
-        # agent_collector.next_frame()
-        # if hasattr(agent, 'state'):
-        #     agent_collector.collect('state', pickle.dumps(agent.state.params))
+        agent_collector.next_frame()
+        if hasattr(agent, 'state'):
+            agent_collector.collect('state', pickle.dumps(agent.state.params))
 
         interaction = glue.step()
 
@@ -148,21 +148,21 @@ for idx in indices:
 
     # problem.maybe_save_agent(exp.total_steps)
     # collect final model
-    # agent_collector.next_frame()
-    # if hasattr(agent, 'state'):
-    #     agent_collector.collect('state', pickle.dumps(agent.state.params))
+    agent_collector.next_frame()
+    if hasattr(agent, 'state'):
+        agent_collector.collect('state', pickle.dumps(agent.state.params))
 
     collector.reset()
-    # agent_collector.reset()
+    agent_collector.reset()
 
     # ------------
     # -- Saving --
     # ------------
     saveCollector(exp, collector, base=args.save_path)
 
-    # _tmp: str | None = exp.save_key
-    # exp.save_key = os.path.join(exp.interpolateSavePath(idx), f'agents/')
-    # saveCollector(exp, agent_collector, base=args.save_path)
-    # exp.save_key = _tmp
+    _tmp: str | None = exp.save_key
+    exp.save_key = os.path.join(exp.interpolateSavePath(idx), f'agents/')
+    saveCollector(exp, agent_collector, base=args.save_path)
+    exp.save_key = _tmp
 
     chk.delete()
